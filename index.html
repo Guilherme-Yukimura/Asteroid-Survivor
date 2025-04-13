@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asteroid Survivor</title>
+    <style>
+        * {
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <script src="Entity.js"></script>
+    <script src="Nave.js"></script>
+    <script src="Projectile.js"></script>
+    <script src="Stars.js"></script>
+    <script src="Meteors.js"></script>
+    <script src="Hud.js"></script>
+    <script>
+        var canvas = document.getElementById("canvas");
+        var context = canvas.getContext("2d");
+        canvas.width = innerWidth;
+        canvas.height = innerHeight;
+
+        var FPS = 60;
+        var FrameCount = 0;
+        var stars = new Stars(canvas.width / 15);
+        var MenuOptions = 0;
+        var menuint = 1;
+
+        function resizeCanvas() {
+            canvas.width = innerWidth;
+            canvas.height = innerHeight;
+            stars = new Stars(canvas.width / 15);
+            meteors.resize();
+        }
+
+        window.addEventListener("resize", resizeCanvas)
+
+        var mouse = { x: canvas.width / 2, y: canvas.height / 2 };
+
+        canvas.addEventListener("mousemove", function(event) {
+        mouse.x = event.clientX;
+        mouse.y = event.clientY;
+        });
+
+        var timer = setInterval(menu, 1000/FPS);
+        var keys = {};
+
+        var nave = new Nave(canvas.width/2-50, canvas.height/2-50, 100, 100, "nave1.png");
+        var naveMenu = new Nave(canvas.width*.5-100, canvas.height*.1, 200, 200, "nave1.png");
+        var meteors = new Meteors(15);
+        var hud = new Hud();
+
+        var timerBackground = 0;
+        var positionUpperText = 0;
+        var secondTimerBackground = 0;
+        var scoreTimer = 0;
+        var mockScore = 0;
+        var retryTimer = 0;
+        var click = false;
+
+        function menu()
+        {   context.fillStyle = "black";
+            context.fillRect(0,0,canvas.width, canvas.height);
+            stars.update();
+            
+            if(keys[83]) 
+            {   MenuOptions = (MenuOptions+1)%3;
+                keys[83] = 0;
+            }; 
+
+            if(keys[87]) 
+            {   MenuOptions = (MenuOptions-1+3)%3;
+                keys[87] = 0;
+            }; 
+            
+            naveMenu.draw();
+
+            context.fillStyle = MenuOptions == 0 ? "red" : "white";
+            context.fillRect(canvas.width*.3, canvas.height*.4, canvas.width*.4, canvas.height*.1);
+            
+            context.fillStyle = MenuOptions == 1 ? "red" : "white";
+            context.fillRect(canvas.width*.3, canvas.height*.6, canvas.width*.4, canvas.height*.1);
+            
+            context.fillStyle = MenuOptions == 2 ? "red" : "white";
+            context.fillRect(canvas.width*.3, canvas.height*.8, canvas.width*.4, canvas.height*.1);
+
+            txt(canvas.width*.5, canvas.height*.45, 'JOGAR', 30,'black');
+            txt(canvas.width*.5, canvas.height*.65, '(EM BREVE)', 30,'black');
+            txt(canvas.width*.5, canvas.height*.85, 'FECHAR TUDO', 30,'black');
+
+            if(MenuOptions == 0 && keys[13])
+            {   clearInterval(timer);
+                timer = setInterval(game, 1000/FPS);
+                menuint = 0;
+            }
+            if(MenuOptions == 2 && keys[13]) {
+                canvas.remove();
+            }
+        }
+
+        function game() {
+
+            context.fillStyle = "black";
+            context.fillRect(0, 0, canvas.width, canvas.height);
+
+            stars.update();
+            nave.update();
+            meteors.update();
+            nave.draw();
+            meteors.draw();
+            hud.draw();
+
+            FrameCount++;
+            TimePassed = 1 / FPS * FrameCount;
+            //console.log("Frame: " + FrameCount + " - Tempo Decorrido: " + TimePassed);
+
+            if (nave.life ==  0){
+                clearInterval(timer);
+                timer = setInterval(deathScreen, 1000/FPS);
+            }
+            if (keys[27]) {
+                clearInterval(timer);
+                timer = setInterval(menu, 1000/FPS);
+                menuint = 1;
+            }
+
+        }
+        
+
+        document.addEventListener("keydown",movimentoD);
+        document.addEventListener("keyup",  movimentoU);
+
+        function clickdown () {
+            click = true;
+        }
+
+        function clickup () {
+            click = false;
+        }
+
+        document.addEventListener("mousedown", clickdown)
+        document.addEventListener("mouseup", clickup)
+        
+        function movimentoD(event)
+        {   keys[event.keyCode] = true;
+            // console.log(event.keyCode);
+        }
+        function movimentoU(event)
+        {   keys[event.keyCode] = false;
+        }
+
+        function deathScreen(){
+            context.fillStyle = "rgba(0,0,0,"+timerBackground/100+")";
+            context.fillRect(0,0,canvas.width, canvas.height);
+            context.font = "bold 70px arial";
+            context.fillStyle = "red";
+            context.textAlign = "center";
+            context.textBaseline = "middle";
+            if (timerBackground < 10){
+                timerBackground+=0.25;
+            } else {
+                timerBackground = 100;
+                positionUpperText+=4;
+                context.fillText("GAME OVER NOOB", canvas.width/2, Math.min(canvas.height/2-25, positionUpperText));
+                context.fillStyle = "white";
+                if (positionUpperText >= canvas.height/2-25){
+                    if(secondTimerBackground < FPS){
+                    secondTimerBackground++;
+                    } else {
+                        if (scoreTimer < 10 && mockScore < nave.score){
+                            scoreTimer++;
+                        } else {
+                            mockScore+=8;
+                        }
+                        context.font = "50px arial";
+                        context.fillText("YOUR SCORE: "+Math.min(nave.score, mockScore), canvas.width/2, canvas.height/2+25);
+                        if(mockScore >= nave.score && retryTimer < 100){
+                            retryTimer+=2;
+                        }
+                        txt(canvas.width/2, canvas.height/2+150, 'JOGAR NOVAMENTE?', 50, "rgba(255,255,255,"+retryTimer/100+")");
+                        if(retryTimer >= 100 && keys[13]){
+                            window.location.reload();
+                        }   
+                    }
+                }
+            }
+        }
+
+        function txt(x,y,tex,px,clr)
+        {   context.font = `${px}px Arial`;
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillStyle = clr;
+            context.fillText(tex, x, y);
+        }
+    </script>
+</body>
+</html>
